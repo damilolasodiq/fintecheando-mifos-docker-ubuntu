@@ -1,5 +1,2 @@
 #!/bin/bash
-
-keytool -genkey -noprompt -storepass password -keypass password -keyalg RSA -alias tomcat -dname "CN=tomcat" -keystore /usr/share/tomcat.keystore
-
-catalina.sh $JAVA_OPTS run
+catalina.sh run
