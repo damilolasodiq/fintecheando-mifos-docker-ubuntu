@@ -11,7 +11,7 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
-USE mifostenant-default;
+USE `mifostenant-default`;
 
 -- Dumping structure for table mifostenant-reference.acc_accounting_rule
 DROP TABLE IF EXISTS `acc_accounting_rule`;
@@ -297,13 +297,13 @@ BEGIN
 -- Create temporary table
 CREATE TEMPORARY TABLE temp_cashier_transactions(
 `transaction_date` DATE,
-`transaction_type` VARCHAR(20), 
+`transaction_type` VARCHAR(20),
 `amount` DECIMAL(19,6));
 
 -- Insert result set into temporary table
-INSERT INTO temp_cashier_transactions 
-SELECT cashier_txn.txn_date AS transaction_date, 
-CASE 
+INSERT INTO temp_cashier_transactions
+SELECT cashier_txn.txn_date AS transaction_date,
+CASE
 WHEN cashier_txn.txn_type = 101
 	THEN 'cash_allocated'
 WHEN cashier_txn.txn_type = 102
@@ -315,81 +315,81 @@ LEFT JOIN m_cashiers cashier ON cashier.id = cashier_txn.cashier_id
 LEFT JOIN m_tellers teller ON teller.id = cashier.teller_id
 WHERE cashier.teller_id = tellerId
 	AND cashier_txn.cashier_id = cashierId
-	AND cashier_txn.currency_code = currencyCode 
+	AND cashier_txn.currency_code = currencyCode
 
 UNION ALL
 
-SELECT savings_txn.transaction_date AS transaction_date, 
-CASE 
-WHEN (((savings_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
+SELECT savings_txn.transaction_date AS transaction_date,
+CASE
+WHEN (((savings_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
 		AND acnttrans.id IS NULL)
-	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee')) 
+	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee'))
 	THEN 'cash_in'
-WHEN (((savings_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
+WHEN (((savings_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
 		AND acnttrans.id IS NULL)
-	AND renum.enum_value IN ('withdrawal', 'Waive Charge', 'Interest Posting', 'Overdraft Interest')) 
+	AND renum.enum_value IN ('withdrawal', 'Waive Charge', 'Interest Posting', 'Overdraft Interest'))
 	THEN 'cash_out'
 WHEN acnttrans.id IS NOT NULL AND acnttrans.from_savings_transaction_id IS NOT NULL
 	THEN 'transfers'
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee')) 
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee'))
 	THEN CONCAT(payType.value, '_in')
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('withdrawal', 'Waive Charge', 'Interest Posting', 'Overdraft Interest')) 
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('withdrawal', 'Waive Charge', 'Interest Posting', 'Overdraft Interest'))
 	THEN CONCAT(payType.value, '_out')
 END AS transaction_type,
 savings_txn.amount AS transaction_amount
 FROM m_savings_account_transaction savings_txn
-LEFT JOIN r_enum_value renum 
-		ON savings_txn.transaction_type_enum = renum.enum_id 
+LEFT JOIN r_enum_value renum
+		ON savings_txn.transaction_type_enum = renum.enum_id
 		AND renum.enum_name = 'savings_transaction_type_enum'
 LEFT JOIN m_payment_detail payDetails ON payDetails.id = savings_txn.payment_detail_id
 LEFT JOIN m_payment_type payType ON payType.id = payDetails.payment_type_id
-LEFT JOIN m_account_transfer_transaction acnttrans 
-		ON (acnttrans.from_savings_transaction_id = savings_txn.id 
+LEFT JOIN m_account_transfer_transaction acnttrans
+		ON (acnttrans.from_savings_transaction_id = savings_txn.id
 				OR acnttrans.to_savings_transaction_id = savings_txn.id)
 LEFT JOIN m_savings_account savings ON savings_txn.savings_account_id = savings.id
 LEFT JOIN m_appuser au ON savings_txn.appuser_id = au.id
 LEFT JOIN m_staff s ON au.staff_id = s.id
 LEFT JOIN m_cashiers c ON c.staff_id = s.id
 LEFT JOIN m_tellers t ON t.id = c.teller_id
-WHERE savings_txn.is_reversed = 0 
+WHERE savings_txn.is_reversed = 0
 	AND c.teller_id = tellerId
 	AND c.id = cashierId
-	AND savings.currency_code = currencyCode 
-	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee', 'withdrawal', 
+	AND savings.currency_code = currencyCode
+	AND renum.enum_value IN ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee', 'withdrawal',
 										'Waive Charge', 'Interest Posting', 'Overdraft Interest')
 
 
 UNION ALL
 
 
-SELECT loan_txn.transaction_date AS transaction_date, 
-CASE 
-WHEN (((loan_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
+SELECT loan_txn.transaction_date AS transaction_date,
+CASE
+WHEN (((loan_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
 		AND acnttrans.id IS NULL)
-	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 'CHARGE_PAYMENT')) 
+	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 'CHARGE_PAYMENT'))
 	THEN 'cash_in'
-WHEN (((loan_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
+WHEN (((loan_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
 		AND acnttrans.id IS NULL)
-	AND renum.enum_value IN ('DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES')) 
+	AND renum.enum_value IN ('DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES'))
 	THEN 'cash_out'
 WHEN acnttrans.id IS NOT NULL AND acnttrans.from_loan_transaction_id IS NOT NULL
 	THEN 'transfers'
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 'CHARGE_PAYMENT')) 
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 'CHARGE_PAYMENT'))
 	THEN CONCAT(payType.value, '_in')
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES')) 
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES'))
 	THEN CONCAT(payType.value, '_out')
 END AS transaction_type,
 loan_txn.amount AS transaction_amount
 FROM m_loan_transaction loan_txn
-LEFT JOIN r_enum_value renum ON loan_txn.transaction_type_enum = renum.enum_id 
+LEFT JOIN r_enum_value renum ON loan_txn.transaction_type_enum = renum.enum_id
 	AND renum.enum_name = 'loan_transaction_type_enum'
 LEFT JOIN m_payment_detail payDetails ON payDetails.id = loan_txn.payment_detail_id
 LEFT JOIN m_payment_type payType ON payType.id = payDetails.payment_type_id
-LEFT JOIN m_account_transfer_transaction acnttrans 
+LEFT JOIN m_account_transfer_transaction acnttrans
 			ON (acnttrans.from_loan_transaction_id = loan_txn.id
 					OR acnttrans.to_loan_transaction_id = loan_txn.id)
 LEFT JOIN m_loan loan ON loan_txn.loan_id = loan.id
@@ -397,35 +397,35 @@ LEFT JOIN m_appuser au ON loan_txn.appuser_id = au.id
 LEFT JOIN m_staff s ON au.staff_id = s.id
 LEFT JOIN m_cashiers c ON c.staff_id = s.id
 LEFT JOIN m_tellers t ON t.id = c.teller_id
-WHERE loan_txn.is_reversed = 0 
+WHERE loan_txn.is_reversed = 0
 	AND c.id = cashierId
 	AND c.teller_id = tellerId
-	AND loan.currency_code = currencyCode 
-	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 
+	AND loan.currency_code = currencyCode
+	AND renum.enum_value IN ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT',
 										'CHARGE_PAYMENT', 'DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES')
 
 
 UNION ALL
 
 
-SELECT client_txn.transaction_date AS transaction_date, 
-CASE 
-WHEN ((client_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
-	AND renum.enum_value IN ('PAY_CHARGE')) 
-	THEN 'cash_in' 
-WHEN ((client_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1) 
-	AND renum.enum_value IN ('WAIVE_CHARGE')) 
-	THEN 'cash_out' 
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('PAY_CHARGE')) 
-	THEN CONCAT(payType.value, '_in') 
-WHEN ((payType.is_cash_payment = 0) 
-	AND renum.enum_value IN ('WAIVE_CHARGE')) 
+SELECT client_txn.transaction_date AS transaction_date,
+CASE
+WHEN ((client_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
+	AND renum.enum_value IN ('PAY_CHARGE'))
+	THEN 'cash_in'
+WHEN ((client_txn.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
+	AND renum.enum_value IN ('WAIVE_CHARGE'))
+	THEN 'cash_out'
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('PAY_CHARGE'))
+	THEN CONCAT(payType.value, '_in')
+WHEN ((payType.is_cash_payment = 0)
+	AND renum.enum_value IN ('WAIVE_CHARGE'))
 	THEN CONCAT(payType.value, '_out') ELSE 'invalid'
-END AS transaction_type, 
+END AS transaction_type,
 client_txn.amount AS transaction_amount
 FROM m_client_transaction client_txn
-LEFT JOIN r_enum_value renum ON client_txn.transaction_type_enum = renum.enum_id 
+LEFT JOIN r_enum_value renum ON client_txn.transaction_type_enum = renum.enum_id
 	AND renum.enum_name = 'client_transaction_type_enum'
 LEFT JOIN m_payment_detail payDetails ON payDetails.id = client_txn.payment_detail_id
 LEFT JOIN m_payment_type payType ON payType.id = payDetails.payment_type_id
@@ -433,10 +433,10 @@ LEFT JOIN m_appuser au ON client_txn.appuser_id = au.id
 LEFT JOIN m_staff s ON au.staff_id = s.id
 LEFT JOIN m_cashiers c ON c.staff_id = s.id
 LEFT JOIN m_tellers t ON t.id = c.teller_id
-WHERE client_txn.is_reversed = 0 
+WHERE client_txn.is_reversed = 0
 	AND c.id = cashierId
 	AND c.teller_id = tellerId
-	AND client_txn.currency_code = currencyCode 
+	AND client_txn.currency_code = currencyCode
 	AND renum.enum_value IN ('PAY_CHARGE', 'WAIVE_CHARGE');
 
 -- SELECT * FROM temp_cashier_transactions;
@@ -445,25 +445,25 @@ WHERE client_txn.is_reversed = 0
 -- Create final temporary table one
 CREATE TEMPORARY TABLE final_temp_cashier_report(
 `Row Title` VARCHAR(50),
-`Row Value` CHAR(50), 
+`Row Value` CHAR(50),
 `Verification` VARCHAR(20));
 
 
 -- Insert office into final temporary table
-INSERT INTO final_temp_cashier_report SELECT 'Office' AS '', 
+INSERT INTO final_temp_cashier_report SELECT 'Office' AS '',
 o.name AS '', '' AS ''
 FROM m_office o
 WHERE o.id = officeId;
 
 
 -- Insert teller into final temporary table
-INSERT INTO final_temp_cashier_report SELECT 'Teller' AS '', 
+INSERT INTO final_temp_cashier_report SELECT 'Teller' AS '',
 t.name AS '', '' AS ''
 FROM m_tellers t
 WHERE t.id = tellerId;
 
 -- Insert teller into final temporary table
-INSERT INTO final_temp_cashier_report SELECT 'Cashier' AS '', 
+INSERT INTO final_temp_cashier_report SELECT 'Cashier' AS '',
 s.display_name AS '', '' AS ''
 FROM m_cashiers c
 JOIN m_tellers mt ON mt.id = c.teller_id
@@ -478,32 +478,32 @@ INSERT INTO final_temp_cashier_report VALUES ('Currency', currencyCode, '');
 INSERT INTO final_temp_cashier_report VALUES ('As On Date', asOnDate, '');
 
 -- Insert opening balance into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT 'Beginning cash drawer balance' AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT 'Beginning cash drawer balance' AS '',
 CAST(SUM(CASE
 WHEN (transaction_type = 'cash_allocated' AND transaction_date < asOnDate) THEN amount
 WHEN (transaction_type = 'cash_settled' AND transaction_date < asOnDate) THEN (-1 * amount)
 WHEN (transaction_type = 'cash_in' AND transaction_date < asOnDate) THEN amount
 WHEN (transaction_type = 'cash_out' AND transaction_date < asOnDate) THEN (-1 * amount)
 ELSE 0
-END) AS CHAR) AS '', '' AS '' 
+END) AS CHAR) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert ending balance into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT 'Ending cash drawer balance' AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT 'Ending cash drawer balance' AS '',
 CAST(SUM(CASE
 WHEN (transaction_type = 'cash_allocated' AND transaction_date <= asOnDate) THEN amount
 WHEN (transaction_type = 'cash_settled' AND transaction_date <= asOnDate) THEN (-1 * amount)
 WHEN (transaction_type = 'cash_in' AND transaction_date <= asOnDate) THEN amount
 WHEN (transaction_type = 'cash_out' AND transaction_date <= asOnDate) THEN (-1 * amount)
 ELSE 0
-END) AS CHAR) AS '', '' AS '' 
+END) AS CHAR) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert cash-in into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT 'Total cash disbursed' AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT 'Total cash disbursed' AS '',
 SUM(CASE
 WHEN (transaction_type = 'cash_out' AND transaction_date BETWEEN asOnDate AND  asOnDate) THEN amount
 ELSE 0
@@ -511,8 +511,8 @@ END) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert cash-out into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT 'Total cash received' AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT 'Total cash received' AS '',
 SUM(CASE
 WHEN (transaction_type = 'cash_in' AND transaction_date BETWEEN asOnDate AND  asOnDate) THEN amount
 ELSE 0
@@ -520,7 +520,7 @@ END) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert cash allocated into final temporary table
-INSERT INTO final_temp_cashier_report SELECT 'Cash Allocated' AS '', 
+INSERT INTO final_temp_cashier_report SELECT 'Cash Allocated' AS '',
 SUM(CASE
 WHEN (transaction_type = 'cash_allocated' AND transaction_date BETWEEN asOnDate AND  asOnDate) THEN amount
 ELSE 0
@@ -528,7 +528,7 @@ END) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert cash settled into final temporary table
-INSERT INTO final_temp_cashier_report SELECT 'Cash Settled' AS '', 
+INSERT INTO final_temp_cashier_report SELECT 'Cash Settled' AS '',
 SUM(CASE
 WHEN (transaction_type = 'cash_settled' AND transaction_date BETWEEN asOnDate AND  asOnDate) THEN amount
 ELSE 0
@@ -536,8 +536,8 @@ END) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert cash settled into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT 'Account Transfers' AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT 'Account Transfers' AS '',
 SUM(CASE
 WHEN (transaction_type = 'transfers' AND transaction_date BETWEEN asOnDate AND  asOnDate) THEN amount
 ELSE 0
@@ -545,15 +545,15 @@ END) AS '', '' AS ''
 FROM temp_cashier_transactions;
 
 -- Insert other payment type  into final temporary table
-INSERT INTO final_temp_cashier_report 
-SELECT replace(transaction_type, '_', ' ') AS '', 
+INSERT INTO final_temp_cashier_report
+SELECT replace(transaction_type, '_', ' ') AS '',
 SUM(CASE
 WHEN (transaction_type LIKE '%_in') THEN amount
 WHEN (transaction_type LIKE '%_out') THEN amount
 ELSE 0
 END) AS '', '' AS ''
 FROM temp_cashier_transactions
-WHERE transaction_type NOT IN ('cash_allocated', 'cash_settled', 'cash_in', 'cash_out', 'transfers') 
+WHERE transaction_type NOT IN ('cash_allocated', 'cash_settled', 'cash_in', 'cash_out', 'transfers')
 AND transaction_date BETWEEN asOnDate AND  asOnDate
 GROUP BY transaction_type;
 
